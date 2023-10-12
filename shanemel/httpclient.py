@@ -27,13 +27,13 @@ import urllib.parse
 """
 TODO: 
 [0] Implement basic HTTP GET
-[ ] Implement basic HTTP POST
-[ ] The httpclient can pass all the tests in freetests.py
-[x] The webserver can pass all the tests in not-free-tests.py (you don’t have this one! it can change – but it will be fair to the user stories/requirements)
+[0] Implement basic HTTP POST
+[0] The httpclient can pass all the tests in freetests.py
+[-] The webserver can pass all the tests in not-free-tests.py (you don’t have this one! it can change – but it will be fair to the user stories/requirements)
 [ ] HTTP POST can post vars
-[ ] HTTP POST handles at least Content-Type: application/x-www-form-urlencoded
-[ ] httpclient can handle 404 requests and 200 requests
-[ ] Cumulatively together all tests must SUCCESSFULLY terminate within 150 seconds. Lack of termination is test failure.
+[0] HTTP POST handles at least Content-Type: application/x-www-form-urlencoded
+[0] httpclient can handle 404 requests and 200 requests
+[0] Cumulatively together all tests must SUCCESSFULLY terminate within 150 seconds. Lack of termination is test failure.
 """
 
 def help():
@@ -101,11 +101,22 @@ class HTTPClient(object):
         return HTTPResponse(code, body)
 
     def POST(self, url, args=None):
-        code = 500
-        body = ""
         # Connecting socket and send header
         host, port, path = self.getInfo(url)
-
+        # body is from arguments
+        if args != None:
+            body = urllib.parse.urlencode(args)
+        else:
+            body = urllib.parse.urlencode('')
+        Pheader = self.newPOSH(host,port,path,body)
+        self.connect(host,port)
+        self.sendall(Pheader)
+        # Handle response
+        response = self.recvall(self.socket)  
+        body = self.get_body(response)
+        headers = self.get_headers(response)
+        code = self.get_code(headers)
+        self.close()
         return HTTPResponse(code, body)
 
     def command(self, url, command="GET", args=None):
@@ -131,6 +142,10 @@ class HTTPClient(object):
 
     def newGETH(self,host,port,path):
         header = f'GET {path} HTTP/1.1\r\nHost: {host}:{str(port)}\r\nConnection: close\r\n\r\n'
+        return header
+
+    def newPOSH(self,host,port,path,body):
+        header = f'POST {path} HTTP/1.1\r\nHost: {host}:{port}\r\nContent-type: application/x-www-form-urlencoded\r\nContent-Length: {str(len(body))}\r\n\r\n{body}'
         return header
 
 if __name__ == "__main__":
