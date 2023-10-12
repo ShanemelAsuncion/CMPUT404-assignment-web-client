@@ -24,6 +24,18 @@ import re
 # you may use urllib to encode data appropriately
 import urllib.parse
 
+"""
+TODO: 
+[0] Implement basic HTTP GET
+[ ] Implement basic HTTP POST
+[ ] The httpclient can pass all the tests in freetests.py
+[x] The webserver can pass all the tests in not-free-tests.py (you don’t have this one! it can change – but it will be fair to the user stories/requirements)
+[ ] HTTP POST can post vars
+[ ] HTTP POST handles at least Content-Type: application/x-www-form-urlencoded
+[ ] httpclient can handle 404 requests and 200 requests
+[ ] Cumulatively together all tests must SUCCESSFULLY terminate within 150 seconds. Lack of termination is test failure.
+"""
+
 def help():
     print("httpclient.py [GET/POST] [URL]\n")
 
@@ -40,14 +52,21 @@ class HTTPClient(object):
         self.socket.connect((host, port))
         return None
 
-    def get_code(self, data):
-        return None
+    def get_code(self, headers):
+        headers = headers.split("\r\n")
+        line = headers[0].split(" ")
+        code = int(line[1])
+        return code
 
     def get_headers(self,data):
-        return None
+        splitData = data.split("\r\n\r\n")
+        headers = splitData[0]
+        return headers
 
     def get_body(self, data):
-        return None
+        splitData = data.split("\r\n\r\n")
+        body = splitData[1]
+        return body
     
     def sendall(self, data):
         self.socket.sendall(data.encode('utf-8'))
@@ -68,13 +87,25 @@ class HTTPClient(object):
         return buffer.decode('utf-8')
 
     def GET(self, url, args=None):
-        code = 500
-        body = ""
+        # Connecting socket and send header
+        host, port, path = self.getInfo(url)
+        self.connect(host,port)
+        Gheader = self.newGETH(host,port,path)
+        self.sendall(Gheader)
+        response = self.recvall(self.socket)        
+        # Get response
+        body = self.get_body(response)
+        headers = self.get_headers(response)
+        code = self.get_code(headers)
+        self.close()
         return HTTPResponse(code, body)
 
     def POST(self, url, args=None):
         code = 500
         body = ""
+        # Connecting socket and send header
+        host, port, path = self.getInfo(url)
+
         return HTTPResponse(code, body)
 
     def command(self, url, command="GET", args=None):
@@ -82,7 +113,26 @@ class HTTPClient(object):
             return self.POST( url, args )
         else:
             return self.GET( url, args )
-    
+
+    def getInfo(self, url):
+        # Get data info
+        x = urllib.parse.urlparse(url)
+        host = x.hostname
+        port = x.port
+        path = x.path
+
+        # Error checking
+        if path == "":
+            path = "/"  # default
+        if port == None:
+            port = 80   # default
+
+        return (host,port,path)
+
+    def newGETH(self,host,port,path):
+        header = f'GET {path} HTTP/1.1\r\nHost: {host}:{str(port)}\r\nConnection: close\r\n\r\n'
+        return header
+
 if __name__ == "__main__":
     client = HTTPClient()
     command = "GET"
